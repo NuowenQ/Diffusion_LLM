@@ -45,10 +45,9 @@ experiments/*/
 *.pth
 *.ckpt
 
-# Data
-data/
+# Data (only top-level data cache, not src/data/)
+/data/
 *.csv
-*.json
 *.parquet
 
 # Logs
@@ -61,6 +60,6 @@ tensorboard/
 .cache/
 *.cache
 
-# Models
-models/
-checkpoints/
+# Model weights (only top-level, not src/models/)
+/models/
+/checkpoints/
