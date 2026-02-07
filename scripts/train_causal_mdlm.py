@@ -36,34 +36,40 @@ from src.data.pandora_mdlm_dataloader import create_mdlm_dataloaders
 
 
 def create_mdlm_config(args):
-    """Create MDLM configuration."""
+    """Create MDLM configuration for CausalMDLM."""
     config = OmegaConf.create({
         'model': {
             'length': args.max_length,
-            'num_timesteps': args.num_timesteps,
             'hidden_size': args.hidden_dim,
             'n_heads': args.num_heads,
-            'n_layers': args.num_layers,
+            'n_blocks': args.num_layers,
+            'cond_dim': args.hidden_dim,  # Timestep conditioning dim
             'dropout': args.dropout,
+            'scale_by_sigma': False,
         },
-        'parameterization': 'subs',  # MDLM's SUBStitution parameterization
-        'backbone': 'dit',
-        'sampling': {
-            'predictor': 'ddpm_cache',  # Fast MDLM sampler
-            'steps': 1000,
+        'parameterization': 'subs',
+        'T': 0,  # Continuous time (0 = continuous, >0 = discrete steps)
+        'subs_masking': False,
+        'time_conditioning': True,
+        'noise': {
+            'type': 'loglinear',
         },
         'training': {
             'antithetic_sampling': True,
             'importance_sampling': False,
             'change_of_variables': True,
+            'sampling_eps': 1e-5,
         },
-        'eval': {
-            'gen_ppl_eval_model_name_or_path': 'gpt2',
-            'compute_generative_perplexity': False,
+        'optim': {
+            'lr': 1e-4,
+            'weight_decay': 0.01,
         },
-        'time_conditioning': True,
+        'sampling': {
+            'predictor': 'ddpm_cache',
+            'steps': 256,
+        },
     })
-    
+
     return config
 
 
@@ -124,7 +130,7 @@ def main(args):
     # Create model
     print("\nCreating Causal MDLM model...")
     model = CausalMDLM(
-        mdlm_config=mdlm_config,
+        config=mdlm_config,
         encoder_config=encoder_config,
         tokenizer=tokenizer,
         freeze_causal_vae=args.freeze_causal_vae,
@@ -140,8 +146,8 @@ def main(args):
     callbacks = [
         ModelCheckpoint(
             dirpath=output_dir / 'checkpoints',
-            filename='causal-mdlm-{epoch:02d}-{val_loss:.4f}',
-            monitor='val_loss',
+            filename='causal-mdlm-{epoch:02d}-{val/loss:.4f}',
+            monitor='val/loss',
             mode='min',
             save_top_k=3,
             save_last=True,

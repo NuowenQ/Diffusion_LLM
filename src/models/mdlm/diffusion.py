@@ -13,10 +13,17 @@ import torchmetrics
 import transformers
 from torch import Tensor
 
-import dataloader
-import models
-import noise_schedule
-import utils
+import types
+from . import dit, dimamba, autoregressive, ema
+from . import noise_schedule
+from . import utils
+
+# Re-create the 'models' namespace so existing models.dit.DIT etc. references work
+models = types.SimpleNamespace(dit=dit, dimamba=dimamba, autoregressive=autoregressive, ema=ema)
+
+# dataloader is only needed for on_train_start sampler replacement;
+# not available when used as a submodule of src.models.mdlm
+dataloader = None
 
 LOG2 = math.log(2)
 
@@ -217,6 +224,11 @@ class Diffusion(L.LightningModule):
   def on_train_start(self):
     if self.ema:
       self.ema.move_shadow_params_to_device(self.device)
+    # FaultTolerant sampler replacement only available when
+    # dataloader module is present (i.e. running from mdlm_base).
+    # When used as submodule, skip sampler replacement.
+    if dataloader is None:
+      return
     # Adapted from:
     # https://github.com/Dao-AILab/flash-attention/blob/main/training/src/datamodules/language_modeling_hf.py
     distributed = (

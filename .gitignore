@@ -27,7 +27,6 @@ env/
 .venv
 
 # IDEs
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -36,23 +35,11 @@ env/
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb
 
-# Experiments
-experiments/*/
-!experiments/.gitkeep
-*.pt
-*.pth
-*.ckpt
-
-# Data (only top-level data cache, not src/data/)
+# Data cache (only top-level data cache, not src/data/)
 /data/
-*.csv
-*.parquet
 
 # Logs
-logs/
-*.log
 wandb/
 tensorboard/
 
@@ -60,6 +47,6 @@ tensorboard/
 .cache/
 *.cache
 
-# Model weights (only top-level, not src/models/)
+# Large model weight downloads (not trained checkpoints)
 /models/
 /checkpoints/

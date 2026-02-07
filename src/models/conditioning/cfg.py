@@ -199,6 +199,32 @@ class CFGWrapper(nn.Module):
 
         return personality * dropout_mask
 
+    def compute_loss(
+        self,
+        input_ids: torch.Tensor,
+        personality: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+    ) -> dict:
+        """
+        Compute loss with CFG dropout applied to personality conditioning.
+
+        Delegates to the wrapped model's compute_loss after applying
+        conditioning dropout during training.
+
+        Args:
+            input_ids: Token IDs [batch, seq_len]
+            personality: Personality conditioning [batch, conditioning_dim]
+            attention_mask: Optional attention mask [batch, seq_len]
+
+        Returns:
+            Loss dictionary from the wrapped model
+        """
+        if self.training:
+            personality = self.apply_conditioning_dropout(personality)
+
+        return self.model.compute_loss(
+            input_ids, personality, attention_mask=attention_mask)
+
     @torch.no_grad()
     def guided_sample(
         self,

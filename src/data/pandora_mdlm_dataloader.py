@@ -38,49 +38,43 @@ def create_mdlm_dataloaders(
     tokenizer_name: str = 'gpt2',
     max_length: int = 1024,
     num_workers: int = 4,
-    train_ratio: float = 0.7,
-    val_ratio: float = 0.15,
     normalize_scores: bool = True,
 ) -> tuple:
     """
     Create MDLM-compatible PANDORA dataloaders.
-    
+
     Args:
         batch_size: Batch size
         tokenizer_name: Name of tokenizer
         max_length: Maximum sequence length
         num_workers: Number of data loading workers
-        train_ratio: Train split ratio
-        val_ratio: Validation split ratio
         normalize_scores: Whether to normalize personality scores
-        
+
     Returns:
         (train_loader, val_loader, test_loader)
     """
-    # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    
-    # Create datasets
-    full_dataset = MDLMPANDORADataset(
-        tokenizer=tokenizer,
+    # Create datasets using the HuggingFace splits
+    train_dataset = MDLMPANDORADataset(
+        split='train',
+        tokenizer_name=tokenizer_name,
         max_length=max_length,
         normalize_scores=normalize_scores,
     )
-    
-    # Split dataset
-    total_size = len(full_dataset)
-    train_size = int(train_ratio * total_size)
-    val_size = int(val_ratio * total_size)
-    test_size = total_size - train_size - val_size
-    
-    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(
-        full_dataset,
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(42)
+
+    val_dataset = MDLMPANDORADataset(
+        split='validation',
+        tokenizer_name=tokenizer_name,
+        max_length=max_length,
+        normalize_scores=normalize_scores,
     )
-    
+
+    test_dataset = MDLMPANDORADataset(
+        split='test',
+        tokenizer_name=tokenizer_name,
+        max_length=max_length,
+        normalize_scores=normalize_scores,
+    )
+
     # Create dataloaders
     train_loader = DataLoader(
         train_dataset,
@@ -89,8 +83,9 @@ def create_mdlm_dataloaders(
         num_workers=num_workers,
         pin_memory=True,
         drop_last=True,
+        collate_fn=PANDORADataset.collate_fn,
     )
-    
+
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
@@ -98,8 +93,9 @@ def create_mdlm_dataloaders(
         num_workers=num_workers,
         pin_memory=True,
         drop_last=False,
+        collate_fn=PANDORADataset.collate_fn,
     )
-    
+
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
@@ -107,13 +103,14 @@ def create_mdlm_dataloaders(
         num_workers=num_workers,
         pin_memory=True,
         drop_last=False,
+        collate_fn=PANDORADataset.collate_fn,
     )
-    
+
     print(f"MDLM PANDORA Dataloaders created:")
     print(f"  Train: {len(train_dataset)} samples, {len(train_loader)} batches")
     print(f"  Val: {len(val_dataset)} samples, {len(val_loader)} batches")
     print(f"  Test: {len(test_dataset)} samples, {len(test_loader)} batches")
-    
+
     return train_loader, val_loader, test_loader
 
 
